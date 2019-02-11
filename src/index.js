@@ -18,16 +18,16 @@ const memoized = (map, key, fn) => {
 
 function createComponentDidUpdate (displayName, opts) {
   return function componentDidUpdate (prevProps, prevState) {
-    const propsDiff = classifyDiff(prevProps, this.props, `${displayName}.props`)
+    const propsDiff = classifyDiff(prevProps, this.props, `${displayName}.props`, opts)
     if (propsDiff.type === DIFF_TYPES.UNAVOIDABLE) {
       return
     }
 
-    const stateDiff = classifyDiff(prevState, this.state, `${displayName}.state`)
+    const stateDiff = classifyDiff(prevState, this.state, `${displayName}.state`, opts)
     if (stateDiff.type === DIFF_TYPES.UNAVOIDABLE) {
       return
     }
-    opts.notifier(opts.groupByComponent, opts.collapseComponentGroups, displayName, [propsDiff, stateDiff])
+    opts.notifier(opts.groupByComponent, opts.collapseComponentGroups, displayName, [propsDiff, stateDiff], opts)
   }
 }
 

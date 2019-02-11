@@ -1,5 +1,7 @@
-import _ from 'lodash'
+import _, {filter} from 'lodash';
+import every from 'lodash/every'
 import isEqual from 'react-fast-compare'
+import {shouldInclude} from './shouldInclude';
 
 export const DIFF_TYPES = {
   UNAVOIDABLE: 'unavoidable',
@@ -8,7 +10,7 @@ export const DIFF_TYPES = {
   FUNCTIONS: 'functions'
 }
 
-export const classifyDiff = (prev, next, name) => {
+export const classifyDiff = (prev, next, name, opts = {}) => {
   if (prev === next) {
     return {
       type: DIFF_TYPES.SAME,
@@ -19,12 +21,28 @@ export const classifyDiff = (prev, next, name) => {
   }
 
   if (isEqual(prev, next)) {
+    let changedKeys = [];
+    if (prev && next) {
+      Object.keys(prev).forEach((key) => {
+        if ( shouldInclude(key, {include: opts.includeProps, exclude: opts.excludeProps}) &&  prev[key] !== next[key]) {
+          changedKeys.push(key);
+        }
+      });
+    }
+
     return {
       type: DIFF_TYPES.EQUAL,
       name,
       prev,
-      next
+      next,
+      changedKeys
     }
+  }if (prev && next) {
+    Object.keys(prev).forEach((key) => {
+      if ( shouldInclude(key, {include: opts.includeProps, exclude: opts.includeProps}) &&  prev[key] !== next[key]) {
+        console.log('"' + key + '" property is not equal by reference');
+      }
+    });
   }
 
   if (!prev || !next) {
@@ -43,15 +61,23 @@ export const classifyDiff = (prev, next, name) => {
     return _.isFunction(prevFn) && _.isFunction(nextFn) && prevFn.name === nextFn.name;
   };
 
-  const keys = _.union(_.keys(prev), _.keys(next));
-  const changedKeys = _.filter(keys, isChanged);
+  let keys = _.union(_.keys(prev), _.keys(next));
 
-  if (changedKeys.length && _.every(changedKeys, isSameFunction)) {
-    return {
-      type: DIFF_TYPES.FUNCTIONS,
-      name,
-      prev: _.pick(prev, changedKeys),
-      next: _.pick(next, changedKeys)
+  let {includeProps, excludeProps} = opts;
+  keys = filter(keys, (key)=>{
+    return shouldInclude(key, {include: includeProps, exclude: excludeProps});
+  }); 
+
+  {
+    let changedKeys = _.filter(keys, isChanged);
+
+    if (changedKeys.length && every(changedKeys, isSameFunction)) {
+      return {
+        type: DIFF_TYPES.FUNCTIONS,
+        name,
+        prev: _.pick(prev, changedKeys),
+        next: _.pick(next, changedKeys)
+      }
     }
   }
 
